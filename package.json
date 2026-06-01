@@ -1,6 +1,7 @@
 {
   "name": "@open-party-lab/game-air-hockey",
   "version": "0.1.0",
+  "description": "Two-player arcade air hockey for Open Party Lab with phone joystick controls.",
   "private": false,
   "license": "Apache-2.0",
   "type": "module",
@@ -36,7 +37,8 @@
     "dist",
     "README.md",
     "AGENTS.md",
-    "docs/images"
+    "docs/images",
+    "docs"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -58,4 +60,3 @@
     "typescript": "^5.7.3"
   }
 }
-
