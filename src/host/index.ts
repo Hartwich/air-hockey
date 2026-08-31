@@ -1,5 +1,7 @@
 import Phaser from "phaser";
 import { airHockeyManifest } from "../manifest.js";
+import { renderRoundScreens } from "./roundScreens.js";
+import { tokens } from "./platformTheme.js";
 
 interface HostClientLike {
   subscribe(callback: (state: HostAppStateLike) => void): () => void;
@@ -48,16 +50,21 @@ export class AirHockeyHostScene extends Phaser.Scene {
   create(): void {
     const client = this.registry.get("hostClient") as HostClientLike;
 
-    this.cameras.main.setBackgroundColor("#020617");
+    this.cameras.main.setBackgroundColor(tokens().color.background);
     this.rinkGraphics = this.add.graphics();
     this.actorsGraphics = this.add.graphics();
     this.infoText = this.add.text(32, 28, "", {
       fontFamily: hostTheme.bodyFont,
       fontSize: "30px",
-      color: "#e2e8f0"
+      color: tokens().color.textSoft
     });
 
     this.unsubscribe = client.subscribe((state) => {
+      // Intro and result screens belong to this game, not the platform.
+      if (renderRoundScreens(this, state)) {
+        return;
+      }
+
       const gameState = (state.game?.state ?? null) as AirHockeyHostState | null;
       const en = state.room?.language === "en";
 

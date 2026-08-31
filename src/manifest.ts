@@ -15,7 +15,11 @@ export const airHockeyManifest = {
   phaseDurations: {
     roundIntroMs: 0,
     countdownMs: 0
-  }
+  },
+
+  ownsScreens: ["round_intro", "result"],
+  visual: { accent: "#4d8590", eyebrow: "Duel" },
+  audio: { track: { profile: "sports", bpm: 134, rootMidi: 58, masterGain: 0.16 } },
 } as const satisfies GameManifest;
 
 export const manifest = airHockeyManifest;
