@@ -18,7 +18,7 @@ export const airHockeyManifest = {
   },
 
   ownsScreens: ["round_intro", "result"],
-  visual: { accent: "#4d8590", eyebrow: "Duel" },
+  visual: { accent: "#4d8590", icon: "puck", eyebrow: "Duel" },
   audio: { track: { profile: "sports", bpm: 134, rootMidi: 58, masterGain: 0.16 } },
 } as const satisfies GameManifest;
 
