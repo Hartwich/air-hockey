@@ -1,7 +1,9 @@
+import { airHockeyText } from "./catalogText.js";
 import type { GameManifest } from "@open-party-lab/game-core";
 
 export const airHockeyManifest = {
   id: "air-hockey",
+  translations: airHockeyText,
   displayName: "Air Hockey",
   description: "Duelle dich im 1v1 und schiesse den Puck ins gegnerische Tor.",
   minPlayers: 2,

@@ -4,6 +4,7 @@ import {
   transitionRoundState,
   type ScoreEntry,
   type ServerGame,
+  type ServerGameContext,
   type SupportedLanguage
 } from "@open-party-lab/game-core";
 import { airHockeyManifest } from "../manifest.js";
@@ -179,8 +180,8 @@ function launchServe(state: AirHockeyState, now: number, language: SupportedLang
   };
 }
 
-function buildScore(state: AirHockeyState): ScoreEntry[] {
-  return state.winnerPlayerId ? [{ playerId: state.winnerPlayerId, delta: 1, reason: "Air Hockey Sieg" }] : [];
+function buildScore(state: AirHockeyState, context: ServerGameContext): ScoreEntry[] {
+  return state.winnerPlayerId ? [{ playerId: state.winnerPlayerId, delta: 1, reason: context.language === "en" ? "Air Hockey win" : "Air Hockey Sieg" }] : [];
 }
 
 export const serverGame: ServerGame<AirHockeyState, AirHockeyInput> = {
