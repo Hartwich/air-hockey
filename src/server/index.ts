@@ -240,6 +240,10 @@ export const serverGame: ServerGame<AirHockeyState, AirHockeyInput> = {
 
     return beginServeCountdown(nextState, context.now, "right", context.language);
   },
+  onPause(state) {
+    return { ...state, paddles: Object.fromEntries(Object.entries(state.paddles).map(([id, paddle]) =>
+      [id, { ...paddle, inputX: 0, inputY: 0 }])) };
+  },
   handleInput(state, input) {
     if (state.phase !== "playing" || input.type !== "move") {
       return state;
