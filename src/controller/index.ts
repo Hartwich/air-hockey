@@ -1,4 +1,4 @@
-import type { ControllerLayoutKey } from "@open-party-lab/game-core";
+import type { ControllerLayoutKey, SupportedLanguage } from "@open-party-lab/game-core";
 import { airHockeyManifest } from "../manifest.js";
 
 interface ReadyLayoutModel {
@@ -7,7 +7,7 @@ interface ReadyLayoutModel {
   playerCount: number;
   label: string;
   description: string;
-  language?: "de" | "en";
+  language?: SupportedLanguage;
   onToggleReady: () => void;
 }
 
@@ -26,9 +26,9 @@ interface VirtualJoystickLayoutModel {
 
 interface ControllerGameRenderContext {
   state: {
-    preferredLanguage?: "de" | "en";
+    preferredLanguage?: SupportedLanguage;
     room?: {
-      language?: "de" | "en";
+      language?: SupportedLanguage;
       selectedGameId?: string;
       availableGames?: Array<{ id: string; displayName?: string; roundCompletionMode?: string }>;
       players?: Array<{ id: string; name: string; isReady?: boolean }>;
@@ -86,7 +86,10 @@ function buildReadyModel(context: ControllerGameRenderContext): ReadyLayoutModel
     return undefined;
   }
 
-  const en = state.room.language === "en";
+  const words = {
+    de: { next: "Nächste Runde", ready: "Spieler sind bereit." }, en: { next: "Next Round", ready: "players are ready." },
+    es: { next: "Siguiente ronda", ready: "jugadores listos." }, fr: { next: "Manche suivante", ready: "joueurs sont prêts." }, "pt-BR": { next: "Próxima rodada", ready: "jogadores estão prontos." }
+  }[state.room.language ?? "de"];
   const playerId = state.player.id;
   const players = state.room.players ?? [];
   const currentPlayerReady = Boolean(
@@ -99,17 +102,21 @@ function buildReadyModel(context: ControllerGameRenderContext): ReadyLayoutModel
     currentPlayerReady,
     readyCount,
     playerCount,
-    label: en ? "Next Round" : "Naechste Runde",
-    description: en
-      ? `${readyCount}/${playerCount} players are ready.`
-      : `${readyCount}/${playerCount} Spieler sind bereit.`,
+    label: words.next,
+    description: `${readyCount}/${playerCount} ${words.ready}`,
     language: state.room.language,
     onToggleReady: () => onSetReady(!currentPlayerReady)
   };
 }
 
 function buildAirHockeyControllerModel(context: ControllerGameRenderContext): VirtualJoystickLayoutModel {
-  const en = context.state.room?.language === "en";
+  const words = {
+    de: { left: "Linkes Tor verteidigen", right: "Rechtes Tor verteidigen", l: "links", r: "rechts", serve: "Anstoß nach", ready: "Bereit machen", guard: "Halte die linke oder rechte Linie sauber und kontere schnell." },
+    en: { left: "Defend the left goal", right: "Defend the right goal", l: "left", r: "right", serve: "Serve to the", ready: "Get ready", guard: "Guard your goal line and counter quickly." },
+    es: { left: "Defiende la portería izquierda", right: "Defiende la portería derecha", l: "izquierda", r: "derecha", serve: "Saque hacia la", ready: "Prepárate", guard: "Protege tu portería y contraataca rápido." },
+    fr: { left: "Défends le but gauche", right: "Défends le but droit", l: "gauche", r: "droite", serve: "Engagement vers la", ready: "Prépare-toi", guard: "Protège ton but et contre-attaque rapidement." },
+    "pt-BR": { left: "Defenda o gol esquerdo", right: "Defenda o gol direito", l: "esquerda", r: "direita", serve: "Reinício para a", ready: "Prepare-se", guard: "Proteja seu gol e contra-ataque rápido." }
+  }[context.state.room?.language ?? context.state.preferredLanguage ?? "de"];
   const playerId = context.state.player?.id ?? "";
   const gameState = (context.state.game?.state ?? {}) as AirHockeyControllerState;
   const ownScore = gameState.scoresByPlayer?.[playerId] ?? 0;
@@ -118,26 +125,20 @@ function buildAirHockeyControllerModel(context: ControllerGameRenderContext): Vi
   const opponentScore = opponentId ? gameState.scoresByPlayer?.[opponentId] ?? 0 : 0;
   const sideLabel =
     playerId === gameState.leftPlayerId
-      ? en
-        ? "Defend the left goal"
-        : "Linkes Tor verteidigen"
-      : en
-        ? "Defend the right goal"
-        : "Rechtes Tor verteidigen";
+      ? words.left
+      : words.right;
   const countdownActive = gameState.serveCountdownEndsAt !== null && gameState.serveCountdownEndsAt !== undefined;
-  const serveSide = gameState.serveDirection === "right" ? (en ? "right" : "rechts") : en ? "left" : "links";
-  const countdownLabel = countdownActive ? (en ? `Serve to the ${serveSide}` : `Anstoss nach ${serveSide}`) : sideLabel;
+  const serveSide = gameState.serveDirection === "right" ? words.r : words.l;
+  const countdownLabel = countdownActive ? `${words.serve} ${serveSide}` : sideLabel;
 
   return {
     kind: "virtual_joystick",
-    title: "Air Hockey",
-    subtitle: context.state.game?.phase === "playing" ? countdownLabel : en ? "Get ready" : "Bereit machen",
+    title: airHockeyManifest.translations[context.state.room?.language ?? context.state.preferredLanguage ?? "de"].displayName,
+    subtitle: context.state.game?.phase === "playing" ? countdownLabel : words.ready,
     helperText:
       context.state.game?.message ??
       gameState.message ??
-      (en
-        ? "Guard your goal line and counter quickly."
-        : "Halte die linke oder rechte Linie sauber und kontere schnell."),
+      words.guard,
     disabled: context.state.game?.phase !== "playing",
     centerLabel: "MOVE",
     resetKey: `${context.state.game?.roundNumber ?? 0}:${context.state.game?.phase ?? "idle"}`,

@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import type { SupportedLanguage } from "@open-party-lab/game-core";
 import { airHockeyManifest } from "../manifest.js";
 import { renderRoundScreens } from "./roundScreens.js";
 import { tokens } from "./platformTheme.js";
@@ -12,7 +13,7 @@ interface HostAppStateLike {
     state?: unknown;
   } | null;
   room?: {
-    language?: "de" | "en";
+    language?: SupportedLanguage;
   } | null;
 }
 
@@ -66,7 +67,11 @@ export class AirHockeyHostScene extends Phaser.Scene {
       }
 
       const gameState = (state.game?.state ?? null) as AirHockeyHostState | null;
-      const en = state.room?.language === "en";
+      const language = state.room?.language ?? "de";
+      const words = {
+        de: { left: "Links", right: "Rechts" }, en: { left: "Left", right: "Right" },
+        es: { left: "Izquierda", right: "Derecha" }, fr: { left: "Gauche", right: "Droite" }, "pt-BR": { left: "Esquerda", right: "Direita" }
+      }[language];
 
       if (!gameState || !this.rinkGraphics || !this.actorsGraphics || !this.infoText) {
         return;
@@ -114,8 +119,8 @@ export class AirHockeyHostScene extends Phaser.Scene {
         this.actorsGraphics.fillCircle(toScreenX(paddle.x), toScreenY(paddle.y), gameState.paddleRadius * scale);
       }
 
-      const leftName = gameState.paddles[gameState.leftPlayerId]?.name ?? (en ? "Left" : "Links");
-      const rightName = gameState.paddles[gameState.rightPlayerId]?.name ?? (en ? "Right" : "Rechts");
+      const leftName = gameState.paddles[gameState.leftPlayerId]?.name ?? words.left;
+      const rightName = gameState.paddles[gameState.rightPlayerId]?.name ?? words.right;
       const leftScore = gameState.scoresByPlayer[gameState.leftPlayerId] ?? 0;
       const rightScore = gameState.scoresByPlayer[gameState.rightPlayerId] ?? 0;
       const scoreLine = `${leftName} ${leftScore} : ${rightScore} ${rightName}`;

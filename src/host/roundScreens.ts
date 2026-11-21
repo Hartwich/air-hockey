@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import type { SupportedLanguage } from "@open-party-lab/game-core";
 import { airHockeyManifest } from "../manifest.js";
 
 /**
@@ -45,7 +46,7 @@ interface ScoreEntryLike {
 interface RoundScreenState {
   phase: string | null;
   message: string | null;
-  language: "de" | "en";
+  language: SupportedLanguage;
   players: Array<{ id: string; name: string }>;
   entries: ScoreEntryLike[];
 }
@@ -64,6 +65,27 @@ const copy = {
     standings: "STANDINGS",
     noPoints: "No points yet.",
     waiting: "Ready up for the next round."
+  },
+  es: {
+    getReady: "La partida está por comenzar",
+    roundOver: "Fin de la ronda",
+    standings: "CLASIFICACIÓN",
+    noPoints: "Aún no hay puntos.",
+    waiting: "Prepárate para la siguiente ronda."
+  },
+  fr: {
+    getReady: "La partie commence bientôt",
+    roundOver: "Manche terminée",
+    standings: "CLASSEMENT",
+    noPoints: "Aucun point pour le moment.",
+    waiting: "Préparez-vous pour la prochaine manche."
+  },
+  "pt-BR": {
+    getReady: "A partida vai começar",
+    roundOver: "Fim da rodada",
+    standings: "CLASSIFICAÇÃO",
+    noPoints: "Ainda não há pontos.",
+    waiting: "Prepare-se para a próxima rodada."
   }
 };
 
@@ -104,7 +126,7 @@ function readState(input: unknown): RoundScreenState {
   return {
     phase,
     message: typeof state.game?.message === "string" ? state.game.message : null,
-    language: state.room?.language === "en" ? "en" : "de",
+    language: (typeof state.room?.language === "string" && state.room.language in copy ? state.room.language : "de") as SupportedLanguage,
     players,
     entries
   };

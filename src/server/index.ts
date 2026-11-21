@@ -47,6 +47,27 @@ const airHockeyText = {
     serveLaunch: (sideLabel: string) => `Face-off toward the ${sideLabel}!`,
     scores: (name: string) => `${name} scores!`,
     wins: (name: string) => `${name} wins the round!`
+  },
+  es: {
+    playerOne: "Jugador 1", playerTwo: "Jugador 2", playerFallback: "Jugador",
+    intro: "Air Hockey: ¡defiende tu portería a izquierda o derecha!", sideLeft: "izquierda", sideRight: "derecha",
+    serveCountdown: (secondsRemaining: number, sideLabel: string) => `Saque en ${secondsRemaining} segundos hacia la ${sideLabel}.`,
+    serveLaunch: (sideLabel: string) => `¡Saque hacia la ${sideLabel}!`,
+    scores: (name: string) => `¡${name} marca!`, wins: (name: string) => `¡${name} gana la ronda!`
+  },
+  fr: {
+    playerOne: "Joueur 1", playerTwo: "Joueur 2", playerFallback: "Joueur",
+    intro: "Air Hockey : défendez votre but à gauche ou à droite !", sideLeft: "gauche", sideRight: "droite",
+    serveCountdown: (secondsRemaining: number, sideLabel: string) => `Engagement dans ${secondsRemaining} secondes vers la ${sideLabel}.`,
+    serveLaunch: (sideLabel: string) => `Engagement vers la ${sideLabel} !`,
+    scores: (name: string) => `${name} marque !`, wins: (name: string) => `${name} remporte la manche !`
+  },
+  "pt-BR": {
+    playerOne: "Jogador 1", playerTwo: "Jogador 2", playerFallback: "Jogador",
+    intro: "Air Hockey: defenda seu gol à esquerda ou à direita!", sideLeft: "esquerda", sideRight: "direita",
+    serveCountdown: (secondsRemaining: number, sideLabel: string) => `Reinício em ${secondsRemaining} segundos para a ${sideLabel}.`,
+    serveLaunch: (sideLabel: string) => `Reinício para a ${sideLabel}!`,
+    scores: (name: string) => `${name} marcou!`, wins: (name: string) => `${name} venceu a rodada!`
   }
 } satisfies Record<SupportedLanguage, {
   playerOne: string;
