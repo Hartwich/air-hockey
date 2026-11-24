@@ -8,6 +8,8 @@ export interface AirHockeyPaddleState {
   y: number;
   inputX: number;
   inputY: number;
+  vx?: number;
+  vy?: number;
 }
 
 export interface AirHockeyInput extends PlayerInput {
@@ -23,6 +25,7 @@ export interface AirHockeyState extends BaseRoundState {
   puckY: number;
   puckVx: number;
   puckVy: number;
+  puckIdleMs?: number;
   paddleRadius: number;
   puckRadius: number;
   goalSize: number;

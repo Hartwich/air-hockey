@@ -43,12 +43,14 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node --test tests/physics.test.mjs",
     "dev": "npm run typecheck",
     "pack:dry-run": "npm pack --dry-run"
   },
   "peerDependencies": {
     "@open-party-lab/game-core": "0.1.0",
-    "phaser": "^3.90.0"
+    "phaser": "^3.90.0",
+    "three": "^0.184.0"
   },
   "peerDependenciesMeta": {
     "@open-party-lab/game-core": {
@@ -56,7 +58,9 @@
     }
   },
   "devDependencies": {
+    "@types/three": "^0.184.1",
     "phaser": "^3.90.0",
+    "three": "^0.184.0",
     "typescript": "^5.7.3"
   }
 }

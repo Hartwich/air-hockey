@@ -6,7 +6,9 @@ Two-player arcade air hockey for Open Party Lab with phone joystick controls.
 
 ## Status
 
-Alpha. The 1v1 puck loop is playable. Needs physics tuning, touch-control balancing, and match-end polish.
+Alpha. The host shows a full-screen 3D table with a recessed goal on each side, a slim scoreboard, and a 2D fallback for hosts without WebGL 2. Phones use the existing joystick layout.
+
+The server simulates puck drag, damped rail and post rebounds, and impacts based on paddle movement. Glancing hits preserve the puck's sideways motion. The puck must pass fully over the goal line to score. If it barely moves for four seconds, play restarts with a face-off. A match ends at five goals.
 
 ## Run Through Open Party Lab
 
@@ -59,6 +61,7 @@ The Platform should import only these public entrypoints.
 ```bash
 npm install
 npm run typecheck
+npm test
 npm run build
 npm run pack:dry-run
 ```

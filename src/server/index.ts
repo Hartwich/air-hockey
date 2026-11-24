@@ -8,7 +8,8 @@ import {
   type SupportedLanguage
 } from "@open-party-lab/game-core";
 import { airHockeyManifest } from "../manifest.js";
-import { clamp, type AirHockeyInput, type AirHockeyPaddleState, type AirHockeyState } from "../protocol.js";
+import type { AirHockeyInput, AirHockeyPaddleState, AirHockeyState } from "../protocol.js";
+import { simulateRink } from "./physics.js";
 
 const arenaWidth = 1_200;
 const arenaHeight = 700;
@@ -17,9 +18,9 @@ const puckRadius = 22;
 const goalSize = 320;
 const targetScore = 5;
 const serveCountdownMs = 3_000;
-const paddleSpeed = 520;
-const puckBaseSpeed = 560;
-const puckMaxSpeed = 980;
+const serveSpeed = 640;
+const serveSideSpeed = 115;
+const idlePuckLimitMs = 4_000;
 
 const airHockeyText = {
   de: {
@@ -85,7 +86,7 @@ const airHockeyText = {
 function normalize(moveX: number, moveY: number): { x: number; y: number } {
   const magnitude = Math.hypot(moveX, moveY);
 
-  if (magnitude < 0.0001) {
+  if (!Number.isFinite(magnitude) || magnitude < 0.0001) {
     return { x: 0, y: 0 };
   }
 
@@ -121,7 +122,9 @@ function createPaddles(
         x: arenaWidth * 0.23,
         y: arenaHeight / 2,
         inputX: 0,
-        inputY: 0
+        inputY: 0,
+        vx: 0,
+        vy: 0
       },
       [rightPlayerId]: {
         playerId: rightPlayerId,
@@ -130,7 +133,9 @@ function createPaddles(
         x: arenaWidth * 0.77,
         y: arenaHeight / 2,
         inputX: 0,
-        inputY: 0
+        inputY: 0,
+        vx: 0,
+        vy: 0
       }
     },
     scoresByPlayer: {
@@ -162,6 +167,7 @@ function beginServeCountdown(
     puckY: arenaHeight / 2,
     puckVx: 0,
     puckVy: 0,
+    puckIdleMs: 0,
     serveDirection: direction,
     serveCountdownEndsAt: now + serveCountdownMs,
     paddles: {
@@ -171,17 +177,21 @@ function beginServeCountdown(
         x: arenaWidth * 0.23,
         y: arenaHeight / 2,
         inputX: 0,
-        inputY: 0
+        inputY: 0,
+        vx: 0,
+        vy: 0
       },
       [state.rightPlayerId]: {
         ...state.paddles[state.rightPlayerId],
         x: arenaWidth * 0.77,
         y: arenaHeight / 2,
         inputX: 0,
-        inputY: 0
+        inputY: 0,
+        vx: 0,
+        vy: 0
       }
     },
-    message: buildServeMessage(direction, 3, language),
+    message: buildServeMessage(direction, Math.ceil(serveCountdownMs / 1000), language),
     updatedAt: now
   };
 }
@@ -193,8 +203,8 @@ function launchServe(state: AirHockeyState, now: number, language: SupportedLang
 
   return {
     ...state,
-    puckVx: serveTowardRight ? puckBaseSpeed : -puckBaseSpeed,
-    puckVy: 0,
+    puckVx: serveTowardRight ? serveSpeed : -serveSpeed,
+    puckVy: serveTowardRight ? serveSideSpeed : -serveSideSpeed,
     serveCountdownEndsAt: null,
     message: text.serveLaunch(sideLabel),
     updatedAt: now
@@ -263,7 +273,7 @@ export const serverGame: ServerGame<AirHockeyState, AirHockeyInput> = {
   },
   onPause(state) {
     return { ...state, paddles: Object.fromEntries(Object.entries(state.paddles).map(([id, paddle]) =>
-      [id, { ...paddle, inputX: 0, inputY: 0 }])) };
+      [id, { ...paddle, inputX: 0, inputY: 0, vx: 0, vy: 0 }])) };
   },
   handleInput(state, input) {
     if (state.phase !== "playing" || input.type !== "move") {
@@ -318,52 +328,20 @@ export const serverGame: ServerGame<AirHockeyState, AirHockeyInput> = {
       return launchServe(state, context.now, context.language);
     }
 
-    const seconds = Math.max(0.001, deltaMs / 1000);
-    const midX = state.arenaWidth / 2;
-    const nextPaddles = { ...state.paddles };
-
-    for (const paddle of Object.values(state.paddles)) {
-      const inLeftHalf = paddle.playerId === state.leftPlayerId;
-      const minX = inLeftHalf ? state.paddleRadius : midX + state.paddleRadius;
-      const maxX = inLeftHalf ? midX - state.paddleRadius : state.arenaWidth - state.paddleRadius;
-      const nextX = clamp(paddle.x + paddle.inputX * paddleSpeed * seconds, minX, maxX);
-      const nextY = clamp(
-        paddle.y + paddle.inputY * paddleSpeed * seconds,
-        state.paddleRadius,
-        state.arenaHeight - state.paddleRadius
-      );
-
-      nextPaddles[paddle.playerId] = {
-        ...paddle,
-        x: nextX,
-        y: nextY
-      };
+    if (!Number.isFinite(deltaMs) || deltaMs <= 0) {
+      return state;
     }
 
-    let puckX = state.puckX + state.puckVx * seconds;
-    let puckY = state.puckY + state.puckVy * seconds;
-    let puckVx = state.puckVx;
-    let puckVy = state.puckVy;
-
-    if (puckY <= state.puckRadius || puckY >= state.arenaHeight - state.puckRadius) {
-      puckY = clamp(puckY, state.puckRadius, state.arenaHeight - state.puckRadius);
-      puckVy *= -1;
-    }
-
-    const goalTop = (state.arenaHeight - state.goalSize) / 2;
-    const goalBottom = goalTop + state.goalSize;
-    const insideGoal = puckY >= goalTop && puckY <= goalBottom;
-    const scoredLeft = puckX <= state.puckRadius && insideGoal;
-    const scoredRight = puckX >= state.arenaWidth - state.puckRadius && insideGoal;
-
-    if (scoredLeft || scoredRight) {
-      const nextServeDirection = state.serveDirection === "right" ? "left" : "right";
-      const scorerId = scoredLeft ? state.rightPlayerId : state.leftPlayerId;
+    const { goal, ...physics } = simulateRink(state, deltaMs / 1000);
+    const tick = state.tick + 1;
+    const nextServeDirection = state.serveDirection === "right" ? "left" : "right";
+    if (goal) {
+      const scorerId = goal === "left" ? state.rightPlayerId : state.leftPlayerId;
       const nextScore = (state.scoresByPlayer[scorerId] ?? 0) + 1;
       const nextState: AirHockeyState = {
         ...state,
-        tick: state.tick + 1,
-        paddles: nextPaddles,
+        ...physics,
+        tick,
         scoresByPlayer: {
           ...state.scoresByPlayer,
           [scorerId]: nextScore
@@ -395,63 +373,22 @@ export const serverGame: ServerGame<AirHockeyState, AirHockeyInput> = {
       return beginServeCountdown(nextState, context.now, nextServeDirection, context.language);
     }
 
-    if (puckX <= state.puckRadius && !insideGoal) {
-      puckX = state.puckRadius;
-      puckVx = Math.abs(puckVx);
-    } else if (puckX >= state.arenaWidth - state.puckRadius && !insideGoal) {
-      puckX = state.arenaWidth - state.puckRadius;
-      puckVx = -Math.abs(puckVx);
-    }
-
-    for (const paddle of Object.values(nextPaddles)) {
-      const dx = puckX - paddle.x;
-      const dy = puckY - paddle.y;
-      const minDistance = state.puckRadius + state.paddleRadius;
-      const distance = Math.hypot(dx, dy);
-
-      if (distance > 0 && distance < minDistance) {
-        const nx = dx / distance;
-        const ny = dy / distance;
-        const overlap = minDistance - distance;
-        puckX += nx * overlap;
-        puckY += ny * overlap;
-
-        const incomingDot = puckVx * nx + puckVy * ny;
-        const reflectedVx = puckVx - 2 * incomingDot * nx;
-        const reflectedVy = puckVy - 2 * incomingDot * ny;
-        const influenceVx = paddle.inputX * 140;
-        const influenceVy = paddle.inputY * 140;
-        puckVx = reflectedVx + influenceVx;
-        puckVy = reflectedVy + influenceVy;
-
-        const speed = Math.hypot(puckVx, puckVy);
-
-        if (speed < puckBaseSpeed) {
-          const scale = puckBaseSpeed / Math.max(speed, 0.001);
-          puckVx *= scale;
-          puckVy *= scale;
-        } else if (speed > puckMaxSpeed) {
-          const scale = puckMaxSpeed / speed;
-          puckVx *= scale;
-          puckVy *= scale;
-        }
-      }
-    }
-
-    return {
+    const puckIdleMs = Math.hypot(physics.puckVx, physics.puckVy) < 14
+      ? (state.puckIdleMs ?? 0) + Math.min(deltaMs, 250)
+      : 0;
+    const nextState = {
       ...state,
-      paddles: nextPaddles,
-      puckX,
-      puckY,
-      puckVx,
-      puckVy,
-      tick: state.tick + 1,
+      ...physics,
+      puckIdleMs,
+      tick,
       updatedAt: context.now
     };
+    return puckIdleMs >= idlePuckLimitMs
+      ? beginServeCountdown(nextState, context.now, nextServeDirection, context.language)
+      : nextState;
   },
   isRoundFinished(state) {
     return state.phase === "locked";
   },
   buildScore
 };
-
